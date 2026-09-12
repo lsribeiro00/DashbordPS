@@ -2,6 +2,28 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+from supabase import create_client, Client
+
+# Inicializa a conexão com Supabase
+@st.cache_resource
+def init_supabase() -> Client:
+    url = st.secrets["supabase"]["SUPABASE_URL"]
+    key = st.secrets["supabase"]["SUPABASE_KEY"]
+    return create_client(url, key)
+
+supabase = init_supabase()
+
+# Função para carregar os dados
+@st.cache_data(ttl=600) # Cache de 10 minutos
+def carregar_dados_vigencia(cliente_selecionado):
+    query = supabase.table("vigencia_gerencial").select("*")
+    
+    if cliente_selecionado != "Todos os Clientes":
+        query = query.eq("uo_cliente", cliente_selecionado)
+        
+    response = query.execute()
+    return pd.DataFrame(response.data)
+
 
 # Configuração da página
 st.set_page_config(
