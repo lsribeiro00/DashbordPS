@@ -11,7 +11,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Estilização CSS para recriar os cards arredondados e o cabeçalho verde
+# Estilização CSS personalizada
 st.markdown("""
     <style>
     .header-bar {
@@ -20,7 +20,7 @@ st.markdown("""
         text-align: center;
         padding: 12px;
         border-radius: 8px;
-        font-size: 26px;
+        font-size: 24px;
         font-weight: bold;
         letter-spacing: 1px;
         margin-bottom: 25px;
@@ -55,11 +55,24 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- MENU LATERAL PRINCIPAL ---
+# --- MENU LATERAL DE NAVEGAÇÃO E FILTROS GLOBAIS ---
 st.sidebar.title("📌 Menu Principal")
 
+# 1. Filtro Global de Cliente (UO)
+lista_clientes = [
+    "Todos os Clientes",
+    "UO: 10960 - GRUPO COLOMBO AGROINDÚSTRIA",
+    "UO: 14384 - JALLES MACHADO - S A",
+    "UO: 10371 - GRUPO SUPERGASBRAS - FROTA PROPRIA",
+    "UO: 8810 - PEPSICO BRASIL"
+]
+cliente_selecionado = st.sidebar.selectbox("🏢 Selecione o Cliente (UO):", lista_clientes)
+
+st.sidebar.divider()
+
+# 2. Seleção do Módulo Principal
 modulo_selecionado = st.sidebar.radio(
-    "Selecione o Módulo:",
+    "📊 Módulo:",
     [
         "Gestão de Vigência",
         "Gestão de Saúde do Veículo",
@@ -71,44 +84,46 @@ modulo_selecionado = st.sidebar.radio(
 
 st.sidebar.divider()
 
+
 # ==========================================
-# MÓDULO: GESTÃO DE VIGÊNCIA
+# 1. MÓDULO: GESTÃO DE VIGÊNCIA
 # ==========================================
 if modulo_selecionado == "Gestão de Vigência":
     
-    # Submenu de navegação interna da Vigência
     submodulo_vigencia = st.sidebar.selectbox(
         "📂 Submódulo:",
         ["Vigência Gerencial", "Vigência Unidades"]
     )
     
-    # ------------------------------------------
-    # SUBMÓDULO: VIGÊNCIA GERENCIAL
-    # ------------------------------------------
+    # --- SUBMÓDULO: VIGÊNCIA GERENCIAL ---
     if submodulo_vigencia == "Vigência Gerencial":
-        
-        # Cabeçalho Verde
-        st.markdown('<div class="header-bar">CONSOLIDADO VIGÊNCIA</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="header-bar">CONSOLIDADO VIGÊNCIA GERENCIAL</div>', unsafe_allow_html=True)
 
         # Dados Mock
         dados_mock = [
-            {"unidade": "JALLES MATRIZ - TERCEIRO", "grupo": "CAMINHÃO TRANSP. BAU UJM", "prefixo": "PF-01", "km_total": 45.0, "km_vigente": 40.2},
-            {"unidade": "JALLES OTAVIO LAGE - TERCEIRO", "grupo": "CAMINHÃO TRANSP. CANAVIEIRO UJM", "prefixo": "PF-02", "km_total": 35.0, "km_vigente": 29.5},
-            {"unidade": "JALLES OTAVIO LAGE - PRÓPRIO", "grupo": "CAMINHÃO TRANSP. CANAVIEIRO UOL", "prefixo": "PF-03", "km_total": 31.0, "km_vigente": 26.0},
-            {"unidade": "JALLES OTAVIO LAGE - PRÓPRIO", "grupo": "CAMINHÃO COMBOIO UOL", "prefixo": "PF-04", "km_total": 25.0, "km_vigente": 20.96},
-            {"unidade": "JALLES SANTA VITORIA - PRÓPRIO", "grupo": "CAMINHÃO TRANSP. VINHAÇA UOL", "prefixo": "PF-05", "km_total": 22.0, "km_vigente": 14.93},
-            {"unidade": "JALLES MATRIZ - PRÓPRIO", "grupo": "CAMINHÃO PRANCHA UOL", "prefixo": "PF-06", "km_total": 18.0, "km_vigente": 11.87},
-            {"unidade": "JALLES MATRIZ - FROTA LEVE", "grupo": "CAMINHÃO TRANSP. VINHAÇA UJM", "prefixo": "PF-07", "km_total": 11.2, "km_vigente": 3.28},
+            {"cliente": "UO: 14384 - JALLES MACHADO - S A", "unidade": "JALLES MATRIZ - TERCEIRO", "grupo": "CAMINHÃO TRANSP. BAU UJM", "prefixo": "PF-01", "km_total": 45.0, "km_vigente": 40.2},
+            {"cliente": "UO: 14384 - JALLES MACHADO - S A", "unidade": "JALLES OTAVIO LAGE - TERCEIRO", "grupo": "CAMINHÃO TRANSP. CANAVIEIRO UJM", "prefixo": "PF-02", "km_total": 35.0, "km_vigente": 29.5},
+            {"cliente": "UO: 10960 - GRUPO COLOMBO AGROINDÚSTRIA", "unidade": "COLOMBO MATRIZ", "grupo": "CAMINHÃO COMBOIO UOL", "prefixo": "PF-03", "km_total": 50.0, "km_vigente": 45.0},
+            {"cliente": "UO: 10371 - GRUPO SUPERGASBRAS - FROTA PROPRIA", "unidade": "SUPERGASBRAS RJ", "grupo": "VEÍCULO LEVE UJM", "prefixo": "PF-04", "km_total": 20.0, "km_vigente": 18.0},
+            {"cliente": "UO: 8810 - PEPSICO BRASIL", "unidade": "PEPSICO SP", "grupo": "CAMINHÃO PRANCHA UOL", "prefixo": "PF-05", "km_total": 30.0, "km_vigente": 22.0},
         ]
         df_vig = pd.DataFrame(dados_mock)
+
+        # Aplicar filtro de cliente se selecionado
+        if cliente_selecionado != "Todos os Clientes":
+            df_vig = df_vig[df_vig["cliente"] == cliente_selecionado]
 
         col_esquerda, col_direita = st.columns([1, 3.8])
 
         # COLUNA ESQUERDA: Filtros + Cards
         with col_esquerda:
-            unidade_sel = st.selectbox("Unidade", ["Todas"] + list(df_vig["unidade"].unique()))
-            grupo_sel = st.selectbox("Grupo", ["Todos"] + list(df_vig["grupo"].unique()))
-            prefixo_sel = st.selectbox("Prefixo", ["Todos"] + list(df_vig["prefixo"].unique()))
+            unidades_opt = ["Todas"] + list(df_vig["unidade"].unique()) if not df_vig.empty else ["Todas"]
+            grupos_opt = ["Todos"] + list(df_vig["grupo"].unique()) if not df_vig.empty else ["Todos"]
+            prefixos_opt = ["Todos"] + list(df_vig["prefixo"].unique()) if not df_vig.empty else ["Todos"]
+
+            unidade_sel = st.selectbox("Unidade", unidades_opt)
+            grupo_sel = st.selectbox("Grupo", grupos_opt)
+            prefixo_sel = st.selectbox("Prefixo", prefixos_opt)
 
             df_filtered = df_vig.copy()
             if unidade_sel != "Todas":
@@ -119,8 +134,8 @@ if modulo_selecionado == "Gestão de Vigência":
                 df_filtered = df_filtered[df_filtered["prefixo"] == prefixo_sel]
 
             total_frotas = len(df_filtered)
-            total_km = df_filtered["km_total"].sum()
-            km_com_vigencia = df_filtered["km_vigente"].sum()
+            total_km = df_filtered["km_total"].sum() if not df_filtered.empty else 0
+            km_com_vigencia = df_filtered["km_vigente"].sum() if not df_filtered.empty else 0
             km_sem_vigencia = total_km - km_com_vigencia
             pct_vigencia = (km_com_vigencia / total_km * 100) if total_km > 0 else 0
 
@@ -177,79 +192,109 @@ if modulo_selecionado == "Gestão de Vigência":
 
             # 2. Barras Verticais (Unidade)
             st.markdown("##### VIGÊNCIA UNIDADE")
-            df_unidade = df_filtered.groupby("unidade").agg({
-                "km_total": "sum",
-                "km_vigente": "sum"
-            }).reset_index()
-            df_unidade["pct"] = (df_unidade["km_vigente"] / df_unidade["km_total"]) * 100
-            df_unidade = df_unidade.sort_values(by="pct", ascending=False)
+            if not df_filtered.empty:
+                df_unidade = df_filtered.groupby("unidade").agg({"km_total": "sum", "km_vigente": "sum"}).reset_index()
+                df_unidade["pct"] = (df_unidade["km_vigente"] / df_unidade["km_total"]) * 100
+                df_unidade = df_unidade.sort_values(by="pct", ascending=False)
 
-            fig_unidade = px.bar(
-                df_unidade,
-                x="unidade",
-                y="pct",
-                text=df_unidade["pct"].apply(lambda x: f"{x:.2f}%".replace('.', ',')),
-                color_discrete_sequence=["#1E5631"]
-            )
-            fig_unidade.update_traces(textposition='outside')
-            fig_unidade.update_layout(
-                height=260,
-                margin=dict(l=20, r=20, t=25, b=40),
-                xaxis_title="",
-                yaxis_title="",
-                yaxis=dict(range=[0, 115])
-            )
-            st.plotly_chart(fig_unidade, use_container_width=True)
+                fig_unidade = px.bar(
+                    df_unidade,
+                    x="unidade",
+                    y="pct",
+                    text=df_unidade["pct"].apply(lambda x: f"{x:.2f}%".replace('.', ',')),
+                    color_discrete_sequence=["#1E5631"]
+                )
+                fig_unidade.update_traces(textposition='outside')
+                fig_unidade.update_layout(height=260, margin=dict(l=20, r=20, t=25, b=40), xaxis_title="", yaxis_title="", yaxis=dict(range=[0, 115]))
+                st.plotly_chart(fig_unidade, use_container_width=True)
+            else:
+                st.warning("Nenhum dado encontrado para os filtros selecionados.")
 
             # 3. Barras Horizontais (Grupo)
             st.markdown("##### VIGÊNCIA POR GRUPO")
-            df_grupo = df_filtered.groupby("grupo").agg({
-                "km_total": "sum",
-                "km_vigente": "sum"
-            }).reset_index()
-            df_grupo["pct"] = (df_grupo["km_vigente"] / df_grupo["km_total"]) * 100
-            df_grupo = df_grupo.sort_values(by="pct", ascending=True)
+            if not df_filtered.empty:
+                df_grupo = df_filtered.groupby("grupo").agg({"km_total": "sum", "km_vigente": "sum"}).reset_index()
+                df_grupo["pct"] = (df_grupo["km_vigente"] / df_grupo["km_total"]) * 100
+                df_grupo = df_grupo.sort_values(by="pct", ascending=True)
 
-            fig_grupo = px.bar(
-                df_grupo,
-                x="pct",
-                y="grupo",
-                orientation='h',
-                text=df_grupo["pct"].apply(lambda x: f"{x:.2f}%".replace('.', ',')),
-                color_discrete_sequence=["#1E5631"]
-            )
-            fig_grupo.update_traces(textposition='inside')
-            fig_grupo.update_layout(
-                height=320,
-                margin=dict(l=20, r=20, t=10, b=20),
-                xaxis_title="",
-                yaxis_title="",
-                xaxis=dict(range=[0, 105], ticksuffix="%")
-            )
-            st.plotly_chart(fig_grupo, use_container_width=True)
+                fig_grupo = px.bar(
+                    df_grupo,
+                    x="pct",
+                    y="grupo",
+                    orientation='h',
+                    text=df_grupo["pct"].apply(lambda x: f"{x:.2f}%".replace('.', ',')),
+                    color_discrete_sequence=["#1E5631"]
+                )
+                fig_grupo.update_traces(textposition='inside')
+                fig_grupo.update_layout(height=320, margin=dict(l=20, r=20, t=10, b=20), xaxis_title="", yaxis_title="", xaxis=dict(range=[0, 105], ticksuffix="%"))
+                st.plotly_chart(fig_grupo, use_container_width=True)
 
-    # ------------------------------------------
-    # SUBMÓDULO: VIGÊNCIA UNIDADES
-    # ------------------------------------------
+    # --- SUBMÓDULO: VIGÊNCIA UNIDADES ---
     elif submodulo_vigencia == "Vigência Unidades":
-        st.markdown('<div class="header-bar">DETALHAMENTO POR UNIDADES</div>', unsafe_allow_html=True)
-        st.info("Aqui vamos construir a visão detalhada de Vigência por Unidade.")
+        st.markdown('<div class="header-bar">VIGÊNCIA POR UNIDADES</div>', unsafe_allow_html=True)
+        st.info(f"Visão detalhada de unidades para: **{cliente_selecionado}**")
+
 
 # ==========================================
-# OUTROS MÓDULOS
+# 2. MÓDULO: GESTÃO DE SAÚDE DO VEÍCULO
 # ==========================================
 elif modulo_selecionado == "Gestão de Saúde do Veículo":
-    st.title("🚛 Gestão de Saúde do Veículo")
-    st.info("Módulo em desenvolvimento...")
+    
+    submodulo_saude = st.sidebar.selectbox(
+        "📂 Submódulo:",
+        ["Saúde Gerencial", "Saúde Unidades"]
+    )
+    
+    if submodulo_saude == "Saúde Gerencial":
+        st.markdown('<div class="header-bar">SAÚDE GERENCIAL DA FROTA</div>', unsafe_allow_html=True)
+        st.info(f"Painel Gerencial de Saúde para: **{cliente_selecionado}**")
+        
+    elif submodulo_saude == "Saúde Unidades":
+        st.markdown('<div class="header-bar">SAÚDE POR UNIDADES</div>', unsafe_allow_html=True)
+        st.info(f"Detalhamento por Unidade de Saúde do Veículo para: **{cliente_selecionado}**")
 
+
+# ==========================================
+# 3. MÓDULO: GESTÃO DE EVENTOS
+# ==========================================
 elif modulo_selecionado == "Gestão de Eventos":
-    st.title("⚠️ Gestão de Eventos")
-    st.info("Módulo em desenvolvimento...")
+    
+    submodulo_eventos = st.sidebar.selectbox(
+        "📂 Submódulo:",
+        ["Eventos Gerencial", "Eventos Unidades"]
+    )
+    
+    if submodulo_eventos == "Eventos Gerencial":
+        st.markdown('<div class="header-bar">EVENTOS GERENCIAL (TELEMETRIA / VIDEOTELEMETRIA)</div>', unsafe_allow_html=True)
+        st.info(f"Consolidado Gerencial de Eventos para: **{cliente_selecionado}**")
+        
+    elif submodulo_eventos == "Eventos Unidades":
+        st.markdown('<div class="header-bar">EVENTOS POR UNIDADES</div>', unsafe_allow_html=True)
+        st.info(f"Visão de Eventos por Unidade para: **{cliente_selecionado}**")
 
+
+# ==========================================
+# 4. MÓDULO: GESTÃO DE CHAMADOS
+# ==========================================
 elif modulo_selecionado == "Gestão de Chamados":
-    st.title("🎫 Gestão de Chamados")
-    st.info("Módulo em desenvolvimento...")
+    
+    submodulo_chamados = st.sidebar.selectbox(
+        "📂 Submódulo:",
+        ["Chamados Gerencial", "Chamados Unidade"]
+    )
+    
+    if submodulo_chamados == "Chamados Gerencial":
+        st.markdown('<div class="header-bar">GESTÃO DE CHAMADOS GERENCIAL</div>', unsafe_allow_html=True)
+        st.info(f"Painel Gerencial de Chamados para: **{cliente_selecionado}**")
+        
+    elif submodulo_chamados == "Chamados Unidade":
+        st.markdown('<div class="header-bar">CHAMADOS POR UNIDADE</div>', unsafe_allow_html=True)
+        st.info(f"Chamados detalhados por Unidade para: **{cliente_selecionado}**")
 
+
+# ==========================================
+# 5. MÓDULO: CONFIGURAÇÕES
+# ==========================================
 elif modulo_selecionado == "Configurações":
-    st.title("⚙️ Configurações & Disparos de E-mail")
-    st.info("Módulo em desenvolvimento...")
+    st.markdown('<div class="header-bar">CONFIGURAÇÕES & DISPAROS AUTOMÁTICOS</div>', unsafe_allow_html=True)
+    st.info("Módulo para gerenciamento de parâmetros, e-mails e credenciais.")
