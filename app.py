@@ -80,7 +80,6 @@ def carregar_dados_vigencia(cliente_selecionado):
         
     response = query.execute()
     
-    # Converte os dados do Supabase para DataFrame do Pandas
     if response.data:
         return pd.DataFrame(response.data)
     else:
@@ -126,16 +125,13 @@ if modulo_selecionado == "Gestão de Vigência":
         ["Vigência Gerencial", "Vigência Unidades"]
     )
     
-    # --- SUBMÓDULO: VIGÊNCIA GERENCIAL ---
     if submodulo_vigencia == "Vigência Gerencial":
         st.markdown('<div class="header-bar">CONSOLIDADO VIGÊNCIA GERENCIAL</div>', unsafe_allow_html=True)
 
-        # Busca os dados reais do Supabase
         df_vig = carregar_dados_vigencia(cliente_selecionado)
 
         col_esquerda, col_direita = st.columns([1, 3.8])
 
-        # COLUNA ESQUERDA: Filtros + Cards
         with col_esquerda:
             unidades_opt = ["Todas"] + list(df_vig["unidade"].unique()) if not df_vig.empty and "unidade" in df_vig.columns else ["Todas"]
             grupos_opt = ["Todos"] + list(df_vig["grupo"].unique()) if not df_vig.empty and "grupo" in df_vig.columns else ["Todos"]
@@ -186,9 +182,7 @@ if modulo_selecionado == "Gestão de Vigência":
                 </div>
             ''', unsafe_allow_html=True)
 
-        # COLUNA DIREITA: Gráficos
         with col_direita:
-            # 1. Gauge Chart
             st.markdown("##### META VIGÊNCIA")
             fig_gauge = go.Figure(go.Indicator(
                 mode="gauge+number",
@@ -212,7 +206,6 @@ if modulo_selecionado == "Gestão de Vigência":
             )
             st.plotly_chart(fig_gauge, use_container_width=True)
 
-            # 2. Barras Verticais (Unidade)
             st.markdown("##### VIGÊNCIA UNIDADE")
             if not df_filtered.empty and "unidade" in df_filtered.columns:
                 df_unidade = df_filtered.groupby("unidade").agg({"km_total": "sum", "km_vigente": "sum"}).reset_index()
@@ -232,7 +225,6 @@ if modulo_selecionado == "Gestão de Vigência":
             else:
                 st.warning("Nenhum dado encontrado para os filtros selecionados.")
 
-            # 3. Barras Horizontais (Grupo)
             st.markdown("##### VIGÊNCIA POR GRUPO")
             if not df_filtered.empty and "grupo" in df_filtered.columns:
                 df_grupo = df_filtered.groupby("grupo").agg({"km_total": "sum", "km_vigente": "sum"}).reset_index()
@@ -251,7 +243,6 @@ if modulo_selecionado == "Gestão de Vigência":
                 fig_grupo.update_layout(height=320, margin=dict(l=20, r=20, t=10, b=20), xaxis_title="", yaxis_title="", xaxis=dict(range=[0, 105], ticksuffix="%"))
                 st.plotly_chart(fig_grupo, use_container_width=True)
 
-    # --- SUBMÓDULO: VIGÊNCIA UNIDADES ---
     elif submodulo_vigencia == "Vigência Unidades":
         st.markdown('<div class="header-bar">VIGÊNCIA POR UNIDADES</div>', unsafe_allow_html=True)
         st.info(f"Visão detalhada de unidades para: **{cliente_selecionado}**")
@@ -261,16 +252,13 @@ if modulo_selecionado == "Gestão de Vigência":
 # 2. MÓDULO: GESTÃO DE SAÚDE DO VEÍCULO
 # ==========================================
 elif modulo_selecionado == "Gestão de Saúde do Veículo":
-    
     submodulo_saude = st.sidebar.selectbox(
         "📂 Submódulo:",
         ["Saúde Gerencial", "Saúde Unidades"]
     )
-    
     if submodulo_saude == "Saúde Gerencial":
         st.markdown('<div class="header-bar">SAÚDE GERENCIAL DA FROTA</div>', unsafe_allow_html=True)
         st.info(f"Painel Gerencial de Saúde para: **{cliente_selecionado}**")
-        
     elif submodulo_saude == "Saúde Unidades":
         st.markdown('<div class="header-bar">SAÚDE POR UNIDADES</div>', unsafe_allow_html=True)
         st.info(f"Detalhamento por Unidade de Saúde do Veículo para: **{cliente_selecionado}**")
@@ -280,16 +268,13 @@ elif modulo_selecionado == "Gestão de Saúde do Veículo":
 # 3. MÓDULO: GESTÃO DE EVENTOS
 # ==========================================
 elif modulo_selecionado == "Gestão de Eventos":
-    
     submodulo_eventos = st.sidebar.selectbox(
         "📂 Submódulo:",
         ["Eventos Gerencial", "Eventos Unidades"]
     )
-    
     if submodulo_eventos == "Eventos Gerencial":
         st.markdown('<div class="header-bar">EVENTOS GERENCIAL (TELEMETRIA / VIDEOTELEMETRIA)</div>', unsafe_allow_html=True)
         st.info(f"Consolidado Gerencial de Eventos para: **{cliente_selecionado}**")
-        
     elif submodulo_eventos == "Eventos Unidades":
         st.markdown('<div class="header-bar">EVENTOS POR UNIDADES</div>', unsafe_allow_html=True)
         st.info(f"Visão de Eventos por Unidade para: **{cliente_selecionado}**")
@@ -299,24 +284,87 @@ elif modulo_selecionado == "Gestão de Eventos":
 # 4. MÓDULO: GESTÃO DE CHAMADOS
 # ==========================================
 elif modulo_selecionado == "Gestão de Chamados":
-    
     submodulo_chamados = st.sidebar.selectbox(
         "📂 Submódulo:",
         ["Chamados Gerencial", "Chamados Unidade"]
     )
-    
     if submodulo_chamados == "Chamados Gerencial":
         st.markdown('<div class="header-bar">GESTÃO DE CHAMADOS GERENCIAL</div>', unsafe_allow_html=True)
         st.info(f"Painel Gerencial de Chamados para: **{cliente_selecionado}**")
-        
     elif submodulo_chamados == "Chamados Unidade":
         st.markdown('<div class="header-bar">CHAMADOS POR UNIDADE</div>', unsafe_allow_html=True)
         st.info(f"Chamados detalhados por Unidade para: **{cliente_selecionado}**")
 
 
 # ==========================================
-# 5. MÓDULO: CONFIGURAÇÕES
+# 5. MÓDULO: CONFIGURAÇÕES & UPLOAD DE VEÍCULOS
 # ==========================================
 elif modulo_selecionado == "Configurações":
-    st.markdown('<div class="header-bar">CONFIGURAÇÕES & DISPAROS AUTOMÁTICOS</div>', unsafe_allow_html=True)
-    st.info("Módulo para gerenciamento de parâmetros, e-mails e credenciais.")
+    st.markdown('<div class="header-bar">CONFIGURAÇÕES & IMPORTAÇÃO DE DADOS</div>', unsafe_allow_html=True)
+    
+    tab_upload, tab_geral = st.tabs(["📤 Upload de Veículos (Excel)", "⚙️ Parâmetros Gerais"])
+
+    with tab_upload:
+        st.subheader("Importar Planilha de Veículos para o Supabase")
+        
+        uploaded_file = st.file_uploader("Selecione o arquivo Excel (ex: veiculos.xlsx)", type=["xlsx", "xls"])
+        
+        if uploaded_file is not None:
+            try:
+                # 1. Leitura dos dados
+                df_upload = pd.read_excel(uploaded_file)
+                st.write(f"📊 Linhas encontradas na planilha: **{len(df_upload)}**")
+
+                # 2. Normalização dos nomes de colunas
+                col_mapping = {
+                    'PLACA': 'placa',
+                    'PREFIXO': 'prefixo',
+                    'UO': 'uo',
+                    'GRUPO': 'grupo',
+                    'TIPO': 'tipo',
+                    'SITUAÇÃO': 'situacao',
+                    'PREVISÃO RETORNO': 'previsao_retorno',
+                    'MARCA': 'marca',
+                    'MODELO': 'modelo',
+                    'ANO': 'ano'
+                }
+                df_upload = df_upload.rename(columns=col_mapping)
+
+                # 3. Higienização dos dados para evitar erros de tipo no PostgreSQL/Supabase
+                df_upload = df_upload.replace({'-': None, '': None})
+                
+                # Tratamento de Data (Previsão Retorno)
+                if 'previsao_retorno' in df_upload.columns:
+                    df_upload['previsao_retorno'] = pd.to_datetime(df_upload['previsao_retorno'], errors='coerce')
+                    df_upload['previsao_retorno'] = df_upload['previsao_retorno'].dt.strftime('%Y-%m-%d')
+                    df_upload['previsao_retorno'] = df_upload['previsao_retorno'].where(pd.notnull(df_upload['previsao_retorno']), None)
+
+                # Tratamento de Ano
+                if 'ano' in df_upload.columns:
+                    df_upload['ano'] = pd.to_numeric(df_upload['ano'], errors='coerce').fillna(0).astype(int)
+                    df_upload['ano'] = df_upload['ano'].apply(lambda x: int(x) if x > 0 else None)
+
+                st.write("📋 Prévia dos dados higienizados:")
+                st.dataframe(df_upload.head(5))
+
+                # 4. Processamento e Envio em Batch para o Supabase
+                if st.button("🚀 Confirmar e Enviar para o Banco Supabase", type="primary"):
+                    with st.spinner("Enviando dados para o Supabase..."):
+                        # Converter NaN/NaT para None (JSON serializable)
+                        records = df_upload.to_dict(orient='records')
+                        records = [{k: (v if pd.notna(v) else None) for k, v in record.items()} for record in records]
+                        
+                        # Envio em lotes de 200 para garantir máxima velocidade via API REST
+                        chunk_size = 200
+                        for i in range(0, len(records), chunk_size):
+                            chunk = records[i:i + chunk_size]
+                            supabase.table("veiculos").upsert(chunk).execute()
+
+                        st.success(f"✅ Sucesso! {len(records)} registros foram inseridos/atualizados na tabela 'veiculos'.")
+                        st.cache_data.clear()
+
+            except Exception as e:
+                st.error(f"❌ Erro ao processar arquivo: {e}")
+
+    with tab_geral:
+        st.info("Módulo para gerenciamento de parâmetros, e-mails e credenciais.")
