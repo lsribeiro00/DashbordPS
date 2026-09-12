@@ -2,8 +2,8 @@ import pandas as pd
 from supabase import create_client
 
 # 1. Conexão com Supabase
-URL = "https://seu-projeto.supabase.co" # Substitua pela sua URL
-KEY = "sua-chave-anon-ou-service-role"   # Substitua pela sua Key
+URL = "https://fpjbmypkvzgkyeiwgbqq.supabase.co" # Substitua pela sua URL
+KEY = "sb_publishable_KI8qO9pVdWEl60fFQC_B_g__jZLHTUx"   # Substitua pela sua Key
 supabase = create_client(URL, KEY)
 
 # 2. Carrega as Unidades do Banco para mapear os IDs
