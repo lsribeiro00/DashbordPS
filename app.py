@@ -192,15 +192,14 @@ if pagina_selecionada == "Gestão de Vigência":
             text=df_unidade["pct"].apply(lambda x: f"{x:.2f}%".replace('.', ',')),
             color_discrete_sequence=["#1E5631"]
         )
-        fig_unidade.update_traces(textposition='outside', textfont=dict(weight='bold', color='white'))
         fig_unidade.update_layout(
             height=260,
             margin=dict(l=20, r=20, t=25, b=40),
             xaxis_title="",
             yaxis_title="",
             yaxis=dict(showticklabels=False, range=[0, 115]),
-            xaxis=dict(tickangle=0, font=dict(size=10))
-        )
+            xaxis=dict(tickangle=0, font=dict(size=10))  # <-- ERRO AQUI (font)
+)
         st.plotly_chart(fig_unidade, use_container_width=True)
 
         # --- 3. GRÁFICO VIGÊNCIA POR GRUPO (BARRAS HORIZONTAIS) ---
