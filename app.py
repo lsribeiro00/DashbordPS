@@ -4,27 +4,6 @@ import plotly.express as px
 import plotly.graph_objects as go
 from supabase import create_client, Client
 
-# Inicializa a conexão com Supabase
-@st.cache_resource
-def init_supabase() -> Client:
-    url = st.secrets["supabase"]["SUPABASE_URL"]
-    key = st.secrets["supabase"]["SUPABASE_KEY"]
-    return create_client(url, key)
-
-supabase = init_supabase()
-
-# Função para carregar os dados
-@st.cache_data(ttl=600) # Cache de 10 minutos
-def carregar_dados_vigencia(cliente_selecionado):
-    query = supabase.table("vigencia_gerencial").select("*")
-    
-    if cliente_selecionado != "Todos os Clientes":
-        query = query.eq("uo_cliente", cliente_selecionado)
-        
-    response = query.execute()
-    return pd.DataFrame(response.data)
-
-
 # Configuração da página
 st.set_page_config(
     page_title="Sistema de Gestão Operacional",
@@ -77,6 +56,31 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+# --- INICIALIZAÇÃO DA CONEXÃO COM SUPABASE ---
+@st.cache_resource
+def init_supabase() -> Client:
+    url = st.secrets["supabase"]["SUPABASE_URL"]
+    key = st.secrets["supabase"]["SUPABASE_KEY"]
+    return create_client(url, key)
+
+supabase = init_supabase()
+
+# --- FUNÇÃO PARA CARREGAR OS DADOS DA TABELA VIGENCIA_GERENCIAL ---
+@st.cache_data(ttl=600)  # Cache de 10 minutos
+def carregar_dados_vigencia(cliente_selecionado):
+    query = supabase.table("vigencia_gerencial").select("*")
+    
+    if cliente_selecionado != "Todos os Clientes":
+        query = query.eq("uo_cliente", cliente_selecionado)
+        
+    response = query.execute()
+    
+    # Converte os dados do Supabase para DataFrame do Pandas
+    if response.data:
+        return pd.DataFrame(response.data)
+    else:
+        return pd.DataFrame()
+
 # --- MENU LATERAL DE NAVEGAÇÃO E FILTROS GLOBAIS ---
 st.sidebar.title("📌 Menu Principal")
 
@@ -119,45 +123,36 @@ if modulo_selecionado == "Gestão de Vigência":
     
     # --- SUBMÓDULO: VIGÊNCIA GERENCIAL ---
     if submodulo_vigencia == "Vigência Gerencial":
-        st.markdown(f'<div class="header-bar">CONSOLIDADO VIGÊNCIA GERENCIAL</div>', unsafe_allow_html=True)
+        st.markdown('<div class="header-bar">CONSOLIDADO VIGÊNCIA GERENCIAL</div>', unsafe_allow_html=True)
 
-        # Dados Mock
-        dados_mock = [
-            {"cliente": "UO: 14384 - JALLES MACHADO - S A", "unidade": "JALLES MATRIZ - TERCEIRO", "grupo": "CAMINHÃO TRANSP. BAU UJM", "prefixo": "PF-01", "km_total": 45.0, "km_vigente": 40.2},
-            {"cliente": "UO: 14384 - JALLES MACHADO - S A", "unidade": "JALLES OTAVIO LAGE - TERCEIRO", "grupo": "CAMINHÃO TRANSP. CANAVIEIRO UJM", "prefixo": "PF-02", "km_total": 35.0, "km_vigente": 29.5},
-            {"cliente": "UO: 10960 - GRUPO COLOMBO AGROINDÚSTRIA", "unidade": "COLOMBO MATRIZ", "grupo": "CAMINHÃO COMBOIO UOL", "prefixo": "PF-03", "km_total": 50.0, "km_vigente": 45.0},
-            {"cliente": "UO: 10371 - GRUPO SUPERGASBRAS - FROTA PROPRIA", "unidade": "SUPERGASBRAS RJ", "grupo": "VEÍCULO LEVE UJM", "prefixo": "PF-04", "km_total": 20.0, "km_vigente": 18.0},
-            {"cliente": "UO: 8810 - PEPSICO BRASIL", "unidade": "PEPSICO SP", "grupo": "CAMINHÃO PRANCHA UOL", "prefixo": "PF-05", "km_total": 30.0, "km_vigente": 22.0},
-        ]
-        df_vig = pd.DataFrame(dados_mock)
-
-        # Aplicar filtro de cliente se selecionado
-        if cliente_selecionado != "Todos os Clientes":
-            df_vig = df_vig[df_vig["cliente"] == cliente_selecionado]
+        # Busca os dados reais do Supabase
+        df_vig = carregar_dados_vigencia(cliente_selecionado)
 
         col_esquerda, col_direita = st.columns([1, 3.8])
 
         # COLUNA ESQUERDA: Filtros + Cards
         with col_esquerda:
-            unidades_opt = ["Todas"] + list(df_vig["unidade"].unique()) if not df_vig.empty else ["Todas"]
-            grupos_opt = ["Todos"] + list(df_vig["grupo"].unique()) if not df_vig.empty else ["Todos"]
-            prefixos_opt = ["Todos"] + list(df_vig["prefixo"].unique()) if not df_vig.empty else ["Todos"]
+            unidades_opt = ["Todas"] + list(df_vig["unidade"].unique()) if not df_vig.empty and "unidade" in df_vig.columns else ["Todas"]
+            grupos_opt = ["Todos"] + list(df_vig["grupo"].unique()) if not df_vig.empty and "grupo" in df_vig.columns else ["Todos"]
+            prefixos_opt = ["Todos"] + list(df_vig["prefixo"].unique()) if not df_vig.empty and "prefixo" in df_vig.columns else ["Todos"]
 
             unidade_sel = st.selectbox("Unidade", unidades_opt)
             grupo_sel = st.selectbox("Grupo", grupos_opt)
             prefixo_sel = st.selectbox("Prefixo", prefixos_opt)
 
-            df_filtered = df_vig.copy()
-            if unidade_sel != "Todas":
-                df_filtered = df_filtered[df_filtered["unidade"] == unidade_sel]
-            if grupo_sel != "Todos":
-                df_filtered = df_filtered[df_filtered["grupo"] == grupo_sel]
-            if prefixo_sel != "Todos":
-                df_filtered = df_filtered[df_filtered["prefixo"] == prefixo_sel]
+            df_filtered = df_vig.copy() if not df_vig.empty else pd.DataFrame()
+            
+            if not df_filtered.empty:
+                if unidade_sel != "Todas":
+                    df_filtered = df_filtered[df_filtered["unidade"] == unidade_sel]
+                if grupo_sel != "Todos":
+                    df_filtered = df_filtered[df_filtered["grupo"] == grupo_sel]
+                if prefixo_sel != "Todos":
+                    df_filtered = df_filtered[df_filtered["prefixo"] == prefixo_sel]
 
-            total_frotas = len(df_filtered)
-            total_km = df_filtered["km_total"].sum() if not df_filtered.empty else 0
-            km_com_vigencia = df_filtered["km_vigente"].sum() if not df_filtered.empty else 0
+            total_frotas = len(df_filtered) if not df_filtered.empty else 0
+            total_km = df_filtered["km_total"].sum() if not df_filtered.empty and "km_total" in df_filtered.columns else 0
+            km_com_vigencia = df_filtered["km_vigente"].sum() if not df_filtered.empty and "km_vigente" in df_filtered.columns else 0
             km_sem_vigencia = total_km - km_com_vigencia
             pct_vigencia = (km_com_vigencia / total_km * 100) if total_km > 0 else 0
 
@@ -214,7 +209,7 @@ if modulo_selecionado == "Gestão de Vigência":
 
             # 2. Barras Verticais (Unidade)
             st.markdown("##### VIGÊNCIA UNIDADE")
-            if not df_filtered.empty:
+            if not df_filtered.empty and "unidade" in df_filtered.columns:
                 df_unidade = df_filtered.groupby("unidade").agg({"km_total": "sum", "km_vigente": "sum"}).reset_index()
                 df_unidade["pct"] = (df_unidade["km_vigente"] / df_unidade["km_total"]) * 100
                 df_unidade = df_unidade.sort_values(by="pct", ascending=False)
@@ -234,7 +229,7 @@ if modulo_selecionado == "Gestão de Vigência":
 
             # 3. Barras Horizontais (Grupo)
             st.markdown("##### VIGÊNCIA POR GRUPO")
-            if not df_filtered.empty:
+            if not df_filtered.empty and "grupo" in df_filtered.columns:
                 df_grupo = df_filtered.groupby("grupo").agg({"km_total": "sum", "km_vigente": "sum"}).reset_index()
                 df_grupo["pct"] = (df_grupo["km_vigente"] / df_grupo["km_total"]) * 100
                 df_grupo = df_grupo.sort_values(by="pct", ascending=True)
