@@ -59,9 +59,14 @@ st.markdown("""
 # --- INICIALIZAÇÃO DA CONEXÃO COM SUPABASE ---
 @st.cache_resource
 def init_supabase() -> Client:
-    url = st.secrets["supabase"]["SUPABASE_URL"]
-    key = st.secrets["supabase"]["SUPABASE_KEY"]
-    return create_client(url, key)
+    try:
+        url = st.secrets["supabase"]["SUPABASE_URL"]
+        key = st.secrets["supabase"]["SUPABASE_KEY"]
+        return create_client(url, key)
+    except KeyError as e:
+        st.error("⚠️ Configuração de credenciais ausente nas Secrets do Streamlit!")
+        st.info("Adicione o bloco [supabase] com SUPABASE_URL e SUPABASE_KEY no painel de configurações (Settings > Secrets).")
+        st.stop()
 
 supabase = init_supabase()
 
