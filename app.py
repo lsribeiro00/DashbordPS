@@ -55,45 +55,79 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- CARREGAMENTO E TRATAMENTO DA BASE DE DADOS VIA EXCEL ---
+# --- FUNÇÕES DE CARREGAMENTO E PROCESSAMENTO VIA EXCEL ---
 @st.cache_data
-def carregar_dados_excel(file):
-    df = pd.read_excel(file)
+def carregar_de_para_unidades(file_unidades):
+    """Carrega o de-para de Unidades e Clientes."""
+    if file_unidades is not None:
+        return pd.read_excel(file_unidades)
+    try:
+        return pd.read_excel("unidades.xlsx")
+    except Exception:
+        return pd.DataFrame(columns=["Uo", "UNIDADE", "CLIENTE"])
+
+@st.cache_data
+def carregar_boletim_veiculo(file_boletim, df_unidades):
+    """Carrega o Boletim do Veículo e realiza o merge com a estrutura de Clientes/Unidades."""
+    if file_boletim is not None:
+        df = pd.read_excel(file_boletim)
+    else:
+        try:
+            df = pd.read_excel("Boletim do Veículo (3).xlsx")
+        except Exception:
+            return pd.DataFrame()
     
-    # Tratamento de datas
+    # Tratamento de datas e tipos numéricos
     if 'Dia' in df.columns:
         df['Dia'] = pd.to_datetime(df['Dia'], errors='coerce')
         
-    # Garantir colunas numéricas sem nulos
     cols_numericas = ['Distância Percorrida (Km)', 'Distância Identificada (Km)']
     for col in cols_numericas:
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
-            
+
+    # Merge com o De-Para de Clientes/Unidades
+    if not df_unidades.empty and 'Uo' in df.columns and 'Uo' in df_unidades.columns:
+        df = df.merge(df_unidades[['Uo', 'UNIDADE', 'CLIENTE']], on='Uo', how='left')
+        df['CLIENTE'] = df['CLIENTE'].fillna("Outros / Não Mapeados")
+        df['UNIDADE'] = df['UNIDADE'].fillna(df['Uo'])
+    else:
+        df['CLIENTE'] = "Todos os Clientes"
+        df['UNIDADE'] = df['Uo'] if 'Uo' in df.columns else "Geral"
+
     return df
 
 
-# --- MENU LATERAL DE NAVEGAÇÃO E UPLOAD ---
+# --- MENU LATERAL DE NAVEGAÇÃO E UPLOADS ---
 st.sidebar.title("📌 Painel de Controle")
 
-# Upload da Base em Excel
-uploaded_file = st.sidebar.file_uploader(
-    "📁 Upload da Base (Boletim do Veículo):",
-    type=["xlsx", "xls"]
-)
-
-# Leitura do arquivo (uploaded ou padrão local)
-if uploaded_file is not None:
-    df_raw = carregar_dados_excel(uploaded_file)
-else:
-    try:
-        df_raw = carregar_dados_excel("Boletim do Veículo (3).xlsx")
-    except Exception:
-        df_raw = pd.DataFrame()
+# 1. Filtro Global de Cliente (UO)
+lista_clientes = [
+    "Todos os Clientes",
+    "UO: 10960 - GRUPO COLOMBO AGROINDÚSTRIA",
+    "UO: 14384 - JALLES MACHADO - S A",
+    "UO: 10371 - GRUPO SUPERGASBRAS - FROTA PROPRIA",
+    "UO: 8810 - PEPSICO BRASIL"
+]
+cliente_selecionado = st.sidebar.selectbox("🏢 Selecione o Cliente (UO):", lista_clientes)
 
 st.sidebar.divider()
 
-# Navegação de Módulos
+# 2. Uploads de Planilhas Excel
+st.sidebar.subheader("📁 Upload de Arquivos")
+uploaded_boletim = st.sidebar.file_uploader(
+    "1. Boletim do Veículo (.xlsx)",
+    type=["xlsx", "xls"]
+)
+
+uploaded_unidades = st.sidebar.file_uploader(
+    "2. Tabela de Unidades/Clientes (.xlsx)",
+    type=["xlsx", "xls"]
+)
+
+st.sidebar.divider()
+
+# 3. Módulos
 modulo_selecionado = st.sidebar.radio(
     "📊 Módulo:",
     [
@@ -104,7 +138,10 @@ modulo_selecionado = st.sidebar.radio(
     ]
 )
 
-st.sidebar.divider()
+# --- CARREGAMENTO INICIAL DAS PLANILHAS ---
+df_unidades_map = carregar_de_para_unidades(uploaded_unidades)
+df_raw = carregar_boletim_veiculo(uploaded_boletim, df_unidades_map)
+
 
 # ==========================================
 # 1. MÓDULO: GESTÃO DE VIGÊNCIA
@@ -113,47 +150,51 @@ if modulo_selecionado == "Gestão de Vigência":
     
     submodulo_vigencia = st.sidebar.selectbox(
         "📂 Submódulo:",
-        ["Vigência Gerencial", "Detalhamento por Placa"]
+        ["Vigência Gerencial", "Detalhamento por Veículo"]
     )
     
     if df_raw.empty:
-        st.warning("⚠️ Nenhuma base de dados carregada. Faça o upload do arquivo Excel no menu lateral.")
+        st.warning("⚠️ Nenhuma base de dados encontrada. Por favor, faça o upload dos arquivos Excel no menu lateral.")
         st.stop()
 
     if submodulo_vigencia == "Vigência Gerencial":
         st.markdown('<div class="header-bar">CONSOLIDADO VIGÊNCIA GERENCIAL</div>', unsafe_allow_html=True)
 
+        # Filtro de Cliente aplicado no DataFrame
+        if cliente_selecionado != "Todos os Clientes":
+            df_filtered = df_raw[df_raw["CLIENTE"] == cliente_selecionado]
+        else:
+            df_filtered = df_raw.copy()
+
         col_esquerda, col_direita = st.columns([1, 3.8])
 
         with col_esquerda:
-            st.subheader("🔍 Filtros")
+            st.subheader("🔍 Filtros Operacionais")
             
-            # Filtro por UO (Unidade Operacional)
-            uos_disponiveis = ["Todas as UOs"] + sorted(list(df_raw["Uo"].dropna().unique()))
-            uo_sel = st.selectbox("Unidade Operacional (UO)", uos_disponiveis)
+            # Filtro Dinâmico por Unidade
+            unidades_opt = ["Todas as Unidades"] + sorted(list(df_filtered["UNIDADE"].dropna().unique()))
+            unidade_sel = st.selectbox("Unidade Operacional", unidades_opt)
             
-            # Filtro por Placa
-            if uo_sel != "Todas as UOs":
-                df_filtered = df_raw[df_raw["Uo"] == uo_sel]
-            else:
-                df_filtered = df_raw.copy()
+            if unidade_sel != "Todas as Unidades":
+                df_filtered = df_filtered[df_filtered["UNIDADE"] == unidade_sel]
 
-            placas_disponiveis = ["Todas as Placas"] + sorted(list(df_filtered["Placa"].dropna().unique()))
-            placa_sel = st.selectbox("Placa", placas_disponiveis)
+            # Filtro Dinâmico por Placa
+            placas_opt = ["Todas as Placas"] + sorted(list(df_filtered["Placa"].dropna().unique()))
+            placa_sel = st.selectbox("Placa do Veículo", placas_opt)
             
             if placa_sel != "Todas as Placas":
                 df_filtered = df_filtered[df_filtered["Placa"] == placa_sel]
 
-            # Cálculo dos KPIs
+            # Métricas e KPIs
             total_frotas = df_filtered["Placa"].nunique()
             total_km = df_filtered["Distância Percorrida (Km)"].sum()
             km_com_vigencia = df_filtered["Distância Identificada (Km)"].sum()
-            km_sem_vigencia = max(0, total_km - km_com_vigencia)
-            pct_vigencia = (km_com_vigencia / total_km * 100) if total_km > 0 else 0
+            km_sem_vigencia = max(0.0, total_km - km_com_vigencia)
+            pct_vigencia = (km_com_vigencia / total_km * 100) if total_km > 0 else 0.0
 
             st.markdown("<br>", unsafe_allow_html=True)
 
-            # Exibição dos Cards de KPI
+            # Cards visuais
             st.markdown(f'''
                 <div class="kpi-card">
                     <div class="kpi-title">VIGÊNCIA GERAL</div>
@@ -180,7 +221,6 @@ if modulo_selecionado == "Gestão de Vigência":
         with col_direita:
             st.markdown("##### META VIGÊNCIA")
             
-            # Gráfico de Rosca / Velômetro de Vigência
             fig_gauge = go.Figure(go.Indicator(
                 mode="gauge+number",
                 value=pct_vigencia,
@@ -203,41 +243,48 @@ if modulo_selecionado == "Gestão de Vigência":
             )
             st.plotly_chart(fig_gauge, use_container_width=True)
 
-            # Gráfico de Barras por UO
-            st.markdown("##### VIGÊNCIA POR UNIDADE OPERACIONAL (UO)")
-            if not df_filtered.empty and "Uo" in df_filtered.columns:
-                df_uo = df_filtered.groupby("Uo").agg({
+            # Visão de Unidades
+            st.markdown("##### VIGÊNCIA POR UNIDADE")
+            if not df_filtered.empty and "UNIDADE" in df_filtered.columns:
+                df_unid_chart = df_filtered.groupby("UNIDADE").agg({
                     "Distância Percorrida (Km)": "sum",
                     "Distância Identificada (Km)": "sum"
                 }).reset_index()
 
-                df_uo["pct"] = (df_uo["Distância Identificada (Km)"] / df_uo["Distância Percorrida (Km)"]) * 100
-                df_uo = df_uo.sort_values(by="pct", ascending=False).head(15)
+                df_unid_chart["pct"] = (df_unid_chart["Distância Identificada (Km)"] / df_unid_chart["Distância Percorrida (Km)"]) * 100
+                df_unid_chart = df_unid_chart.sort_values(by="pct", ascending=False).head(15)
 
-                fig_uo = px.bar(
-                    df_uo,
-                    x="Uo",
+                fig_unid = px.bar(
+                    df_unid_chart,
+                    x="UNIDADE",
                     y="pct",
-                    text=df_uo["pct"].apply(lambda x: f"{x:.1f}%"),
+                    text=df_unid_chart["pct"].apply(lambda x: f"{x:.1f}%"),
                     color_discrete_sequence=["#1E5631"]
                 )
-                fig_uo.update_traces(textposition='outside')
-                fig_uo.update_layout(
+                fig_unid.update_traces(textposition='outside')
+                fig_unid.update_layout(
                     height=320,
                     margin=dict(l=20, r=20, t=25, b=60),
                     xaxis_title="",
                     yaxis_title="",
                     yaxis=dict(range=[0, 115])
                 )
-                st.plotly_chart(fig_uo, use_container_width=True)
+                st.plotly_chart(fig_unid, use_container_width=True)
+            else:
+                st.warning("Nenhum registro encontrado para os filtros selecionados.")
 
-    elif submodulo_vigencia == "Detalhamento por Placa":
-        st.markdown('<div class="header-bar">DETALHAMENTO POR PLACA</div>', unsafe_allow_html=True)
-        st.dataframe(df_raw, use_container_width=True)
+    elif submodulo_vigencia == "Detalhamento por Veículo":
+        st.markdown('<div class="header-bar">DETALHAMENTO DE DADOS BRUTOS</div>', unsafe_allow_html=True)
+        if cliente_selecionado != "Todos os Clientes":
+            df_display = df_raw[df_raw["CLIENTE"] == cliente_selecionado]
+        else:
+            df_display = df_raw.copy()
+            
+        st.dataframe(df_display, use_container_width=True)
 
 # ==========================================
-# OUTROS MÓDULOS (ESTRUTURA MANTIDA)
+# OUTROS MÓDULOS
 # ==========================================
 elif modulo_selecionado in ["Gestão de Saúde do Veículo", "Gestão de Eventos", "Gestão de Chamados"]:
     st.markdown(f'<div class="header-bar">{modulo_selecionado.upper()}</div>', unsafe_allow_html=True)
-    st.info("Módulo em desenvolvimento. Os dados serão alimentados via Excel.")
+    st.info(f"Painel em construção para o cliente selecionado: **{cliente_selecionado}**")
