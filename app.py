@@ -151,7 +151,6 @@ modulo_selecionado = st.sidebar.radio(
 )
 
 # --- CARREGAMENTO INICIAL DAS PLANILHAS ---
-df_unidades_map = carregar_de_para_unidades(uploaded_unidades)
 df_raw = carregar_boletim_veiculo(uploaded_boletim, df_unidades_map)
 
 
