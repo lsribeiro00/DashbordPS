@@ -243,7 +243,7 @@ if modulo_selecionado == "Gestão de Vigência":
             )
             st.plotly_chart(fig_gauge, use_container_width=True)
 
-            # Visão de Unidades
+           # Visão de Unidades (Barras Horizontais)
             st.markdown("##### VIGÊNCIA POR UNIDADE")
             if not df_filtered.empty and "UNIDADE" in df_filtered.columns:
                 df_unid_chart = df_filtered.groupby("UNIDADE").agg({
@@ -252,35 +252,34 @@ if modulo_selecionado == "Gestão de Vigência":
                 }).reset_index()
 
                 df_unid_chart["pct"] = (df_unid_chart["Distância Identificada (Km)"] / df_unid_chart["Distância Percorrida (Km)"]) * 100
-                df_unid_chart = df_unid_chart.sort_values(by="pct", ascending=False).head(15)
+                
+                # Ordena para que a maior vigência fique no topo do gráfico
+                df_unid_chart = df_unid_chart.sort_values(by="pct", ascending=True).tail(15)
 
                 fig_unid = px.bar(
                     df_unid_chart,
-                    x="UNIDADE",
-                    y="pct",
+                    x="pct",
+                    y="UNIDADE",
+                    orientation='h',  # Torna as barras horizontais
                     text=df_unid_chart["pct"].apply(lambda x: f"{x:.1f}%"),
                     color_discrete_sequence=["#1E5631"]
                 )
-                fig_unid.update_traces(textposition='outside')
+                
+                fig_unid.update_traces(
+                    textposition='outside'
+                )
+                
                 fig_unid.update_layout(
-                    height=320,
-                    margin=dict(l=20, r=20, t=25, b=60),
+                    height=500,  # Aumentado a altura para acomodar bem a lista de unidades
+                    margin=dict(l=20, r=40, t=25, b=20),
                     xaxis_title="",
                     yaxis_title="",
-                    yaxis=dict(range=[0, 115])
+                    xaxis=dict(range=[0, 115])
                 )
+                
                 st.plotly_chart(fig_unid, use_container_width=True)
             else:
                 st.warning("Nenhum registro encontrado para os filtros selecionados.")
-
-    elif submodulo_vigencia == "Detalhamento por Veículo":
-        st.markdown('<div class="header-bar">DETALHAMENTO DE DADOS BRUTOS</div>', unsafe_allow_html=True)
-        if cliente_selecionado != "Todos os Clientes":
-            df_display = df_raw[df_raw["CLIENTE"] == cliente_selecionado]
-        else:
-            df_display = df_raw.copy()
-            
-        st.dataframe(df_display, use_container_width=True)
 
 # ==========================================
 # OUTROS MÓDULOS
