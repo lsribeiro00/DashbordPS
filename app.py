@@ -3,6 +3,23 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
+# --- FUNÇÃO DE CARREGAMENTO (SUBSTITUA A SUA ANTIGA POR ESSA) ---
+@st.cache_data
+def carregar_de_para_unidades(file_unidades=None):
+    # 1. Se o usuário subiu um arquivo manual na barra lateral, usa ele
+    if file_unidades is not None:
+        return pd.read_excel(file_unidades)
+    
+    # 2. Caso contrário, lê o arquivo fixo salvo na pasta do projeto
+    try:
+        return pd.read_excel("unidades.xlsx")
+    except Exception as e:
+        st.error("Arquivo 'unidades.xlsx' não encontrado no diretório do projeto.")
+        return pd.DataFrame()
+
+# --- CARREGA O MAPEAMENTO DE UNIDADES AUTOMATICAMENTE ---
+df_unidades_map = carregar_de_para_unidades()
+
 # Configuração da página
 st.set_page_config(
     page_title="Sistema de Gestão Operacional",
