@@ -120,11 +120,6 @@ uploaded_boletim = st.sidebar.file_uploader(
     type=["xlsx", "xls"]
 )
 
-uploaded_unidades = st.sidebar.file_uploader(
-    "2. Tabela de Unidades/Clientes (.xlsx)",
-    type=["xlsx", "xls"]
-)
-
 st.sidebar.divider()
 
 # 3. Módulos
