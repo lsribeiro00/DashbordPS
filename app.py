@@ -264,18 +264,28 @@ if modulo_selecionado == "Gestão de Vigência":
                     "Distância Identificada (Km)": "sum"
                 }).reset_index()
 
- # 2. Verifica se uma unidade específica foi selecionada no filtro
-            # Altere 'unidade_selecionada' para o nome da sua variável do filtro
-            unidade_filtrada = (unidade_selecionada != "Todas as Unidades") if 'unidade_selecionada' in locals() else False
-
-            # 3. Se NÃO houver unidade específica selecionada, faz o merge para trazer todas zeradas
-            if not unidade_filtrada:
-                if cliente_selecionado != "Todos os Clientes":
-                    unidades_do_cliente = df_unidades_map[df_unidades_map["CLIENTE"] == cliente_selecionado][["UNIDADE"]].drop_duplicates()
-                else:
-                    unidades_do_cliente = df_unidades_map[["UNIDADE"]].drop_duplicates()
+ # Visão de Unidades (Escala de Cores + Tratamento de Filtro)
+            st.markdown("##### VIGÊNCIA POR UNIDADE")
+            if not df_filtered.empty and "UNIDADE" in df_filtered.columns:
                 
-                df_unid_chart = unidades_do_cliente.merge(df_unid_chart, on="UNIDADE", how="left").fillna(0)
+                # 1. Agrupa dados do boletim
+                df_unid_chart = df_filtered.groupby("UNIDADE").agg({
+                    "Distância Percorrida (Km)": "sum",
+                    "Distância Identificada (Km)": "sum"
+                }).reset_index()
+
+                # 2. Verifica se uma unidade específica foi filtrada
+                # Altere 'unidade_selecionada' para a sua variável de filtro de unidade, se necessário
+                unidade_filtrada = (unidade_selecionada != "Todas as Unidades") if 'unidade_selecionada' in locals() else False
+
+                # 3. Se NÃO houver unidade específica filtrada (Visão Geral), traz todas as unidades zeradas
+                if not unidade_filtrada:
+                    if cliente_selecionado != "Todos os Clientes":
+                        unidades_do_cliente = df_unidades_map[df_unidades_map["CLIENTE"] == cliente_selecionado][["UNIDADE"]].drop_duplicates()
+                    else:
+                        unidades_do_cliente = df_unidades_map[["UNIDADE"]].drop_duplicates()
+                    
+                    df_unid_chart = unidades_do_cliente.merge(df_unid_chart, on="UNIDADE", how="left").fillna(0)
 
                 # 4. Calcula o percentual de vigência
                 df_unid_chart["pct"] = df_unid_chart.apply(
@@ -284,7 +294,7 @@ if modulo_selecionado == "Gestão de Vigência":
                     axis=1
                 )
 
-                # Ordena para exibir as maiores vigências no topo do gráfico horizontal
+                # Ordena para que a maior vigência fique no topo do gráfico
                 df_unid_chart = df_unid_chart.sort_values(by="pct", ascending=True)
 
                 # 5. Atribuição da escala de cores (Verde, Amarelo, Vermelho)
@@ -312,7 +322,7 @@ if modulo_selecionado == "Gestão de Vigência":
                     textposition='outside'
                 )
 
-                # Ajusta a altura dinamicamente (se for 1 unidade só, a altura fica compacta)
+                # Ajusta a altura dinamicamente (para 1 unidade fica compacto, para várias expande)
                 altura_grafico = max(200, len(df_unid_chart) * 35)
 
                 fig_unid.update_layout(
@@ -326,21 +336,7 @@ if modulo_selecionado == "Gestão de Vigência":
                 st.plotly_chart(fig_unid, use_container_width=True)
             else:
                 st.warning("Nenhum registro encontrado para os filtros selecionados.")
-
-                # Ajusta a altura dinamicamente (se for 1 unidade só, a altura fica compacta)
-                altura_grafico = max(200, len(df_unid_chart) * 35)
-
-                fig_unid.update_layout(
-                    height=altura_grafico,
-                    margin=dict(l=20, r=40, t=25, b=20),
-                    xaxis_title="",
-                    yaxis_title="",
-                    xaxis=dict(range=[0, 115])
-                )
-
-                st.plotly_chart(fig_unid, use_container_width=True)
-                else:
-                st.warning("Nenhum registro encontrado para os filtros selecionados.")
+    
 # ==========================================
 # OUTROS MÓDULOS
 # ==========================================
