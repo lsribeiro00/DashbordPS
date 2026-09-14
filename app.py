@@ -326,6 +326,21 @@ if modulo_selecionado == "Gestão de Vigência":
                 st.plotly_chart(fig_unid, use_container_width=True)
             else:
                 st.warning("Nenhum registro encontrado para os filtros selecionados.")
+
+                # Ajusta a altura dinamicamente (se for 1 unidade só, a altura fica compacta)
+                altura_grafico = max(200, len(df_unid_chart) * 35)
+
+                fig_unid.update_layout(
+                    height=altura_grafico,
+                    margin=dict(l=20, r=40, t=25, b=20),
+                    xaxis_title="",
+                    yaxis_title="",
+                    xaxis=dict(range=[0, 115])
+                )
+
+                st.plotly_chart(fig_unid, use_container_width=True)
+            else:
+                st.warning("Nenhum registro encontrado para os filtros selecionados.")
 # ==========================================
 # OUTROS MÓDULOS
 # ==========================================
