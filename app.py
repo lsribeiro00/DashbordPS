@@ -264,23 +264,22 @@ if modulo_selecionado == "Gestão de Vigência":
                     "Distância Identificada (Km)": "sum"
                 }).reset_index()
 
- # Visão de Unidades (Escala de Cores + Tratamento de Filtro)
+ # Visão de Unidades (Exibe 1 unidade quando filtrada ou todas quando Geral)
             st.markdown("##### VIGÊNCIA POR UNIDADE")
             if not df_filtered.empty and "UNIDADE" in df_filtered.columns:
                 
-                # 1. Agrupa dados do boletim
+                # 1. Agrupa dados do boletim filtrado
                 df_unid_chart = df_filtered.groupby("UNIDADE").agg({
                     "Distância Percorrida (Km)": "sum",
                     "Distância Identificada (Km)": "sum"
                 }).reset_index()
 
-                # 2. Verifica se uma unidade específica foi filtrada
-                # Altere 'unidade_selecionada' para a sua variável de filtro de unidade, se necessário
-                unidade_filtrada = (unidade_selecionada != "Todas as Unidades") if 'unidade_selecionada' in locals() else False
+                # 2. Descobre quantas unidades estão presentes nos dados filtrados
+                unidades_no_filtro = df_unid_chart["UNIDADE"].dropna().unique()
 
-                # 3. Se NÃO houver unidade específica filtrada (Visão Geral), traz todas as unidades zeradas
-                if not unidade_filtrada:
-                    if cliente_selecionado != "Todos os Clientes":
+                # 3. Se houver mais de 1 unidade (visão geral/sem filtro de unidade), faz o merge para trazer todas zeradas
+                if len(unidades_no_filtro) > 1:
+                    if "cliente_selecionado" in locals() and cliente_selecionado != "Todos os Clientes":
                         unidades_do_cliente = df_unidades_map[df_unidades_map["CLIENTE"] == cliente_selecionado][["UNIDADE"]].drop_duplicates()
                     else:
                         unidades_do_cliente = df_unidades_map[["UNIDADE"]].drop_duplicates()
@@ -294,10 +293,10 @@ if modulo_selecionado == "Gestão de Vigência":
                     axis=1
                 )
 
-                # Ordena para que a maior vigência fique no topo do gráfico
+                # Ordena para exibir a maior vigência no topo
                 df_unid_chart = df_unid_chart.sort_values(by="pct", ascending=True)
 
-                # 5. Atribuição da escala de cores (Verde, Amarelo, Vermelho)
+                # 5. Classificação da escala de cores (Verde, Amarelo, Vermelho)
                 def classificar_cor(pct):
                     if pct >= 90.0:
                         return "#2E7D32"  # Verde
@@ -322,12 +321,12 @@ if modulo_selecionado == "Gestão de Vigência":
                     textposition='outside'
                 )
 
-                # Ajusta a altura dinamicamente (para 1 unidade fica compacto, para várias expande)
-                altura_grafico = max(200, len(df_unid_chart) * 35)
+                # Ajusta a altura proporcionalmente (compacto para 1 unidade, expandido para várias)
+                altura_grafico = max(180, len(df_unid_chart) * 35)
 
                 fig_unid.update_layout(
                     height=altura_grafico,
-                    margin=dict(l=20, r=40, t=25, b=20),
+                    margin=dict(l=20, r=40, t=10, b=10),
                     xaxis_title="",
                     yaxis_title="",
                     xaxis=dict(range=[0, 115])
