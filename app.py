@@ -254,24 +254,28 @@ if modulo_selecionado == "Gestão de Vigência":
             )
             st.plotly_chart(fig_gauge, use_container_width=True)
 
-           # Visão de Unidades (Escala de Cores + Todas as Unidades)
+           # Visão de Unidades (Escala de Cores + Ajuste de Filtro de Unidade)
             st.markdown("##### VIGÊNCIA POR UNIDADE")
             if not df_filtered.empty and "UNIDADE" in df_filtered.columns:
                 
-                # 1. Garante a lista completa de unidades cadastradas para o cliente selecionado
-                if cliente_selecionado != "Todos os Clientes":
-                    unidades_do_cliente = df_unidades_map[df_unidades_map["CLIENTE"] == cliente_selecionado][["UNIDADE"]].drop_duplicates()
-                else:
-                    unidades_do_cliente = df_unidades_map[["UNIDADE"]].drop_duplicates()
-
-                # 2. Agrupa dados do boletim
+                # 1. Agrupa dados do boletim (já filtrado pela página/sidebar)
                 df_unid_chart = df_filtered.groupby("UNIDADE").agg({
                     "Distância Percorrida (Km)": "sum",
                     "Distância Identificada (Km)": "sum"
                 }).reset_index()
 
-                # 3. Faz o merge com a lista cadastral para garantir exibições zeradas
-                df_unid_chart = unidades_do_cliente.merge(df_unid_chart, on="UNIDADE", how="left").fillna(0)
+                # 2. Verifica se uma unidade específica foi selecionada no filtro
+                # Substitua 'unidade_selecionada' pela sua variável de filtro de unidade da sidebar
+                unidade_filtrada = (unidade_selecionada != "Todas as Unidades") if 'unidade_selecionada' in locals() else False
+
+                # 3. Se NÃO houver unidade específica selecionada (visão geral), faz o merge para trazer todas zeradas
+                if not unidade_filtrada:
+                    if cliente_selecionado != "Todos os Clientes":
+                        unidades_do_cliente = df_unidades_map[df_unidades_map["CLIENTE"] == cliente_selecionado][["UNIDADE"]].drop_duplicates()
+                    else:
+                        unidades_do_cliente = df_unidades_map[["UNIDADE"]].drop_duplicates()
+                    
+                    df_unid_chart = unidades_do_cliente.merge(df_unid_chart, on="UNIDADE", how="left").fillna(0)
 
                 # 4. Calcula o percentual de vigência
                 df_unid_chart["pct"] = df_unid_chart.apply(
@@ -286,11 +290,11 @@ if modulo_selecionado == "Gestão de Vigência":
                 # 5. Atribuição da escala de cores (Verde, Amarelo, Vermelho)
                 def classificar_cor(pct):
                     if pct >= 90.0:
-                        return "#2E7D32"  # Verde (Excelente)
+                        return "#2E7D32"  # Verde
                     elif pct >= 85.0:
-                        return "#FBC02D"  # Amarelo (Atenção / Médio)
+                        return "#FBC02D"  # Amarelo
                     else:
-                        return "#D32F2F"  # Vermelho (Crítico / Zerado)
+                        return "#D32F2F"  # Vermelho
 
                 df_unid_chart["cor"] = df_unid_chart["pct"].apply(classificar_cor)
 
@@ -308,8 +312,8 @@ if modulo_selecionado == "Gestão de Vigência":
                     textposition='outside'
                 )
 
-                # Ajusta a altura dinamicamente conforme a quantidade de unidades
-                altura_grafico = max(400, len(df_unid_chart) * 28)
+                # Ajusta a altura dinamicamente (se for 1 unidade só, a altura fica compacta)
+                altura_grafico = max(200, len(df_unid_chart) * 35)
 
                 fig_unid.update_layout(
                     height=altura_grafico,
@@ -322,7 +326,6 @@ if modulo_selecionado == "Gestão de Vigência":
                 st.plotly_chart(fig_unid, use_container_width=True)
             else:
                 st.warning("Nenhum registro encontrado para os filtros selecionados.")
-
 # ==========================================
 # OUTROS MÓDULOS
 # ==========================================
