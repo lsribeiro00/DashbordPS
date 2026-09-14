@@ -264,18 +264,18 @@ if modulo_selecionado == "Gestão de Vigência":
                     "Distância Identificada (Km)": "sum"
                 }).reset_index()
 
-                # 2. Verifica se uma unidade específica foi selecionada no filtro
-                # Substitua 'unidade_selecionada' pela sua variável de filtro de unidade da sidebar
-                unidade_filtrada = (unidade_selecionada != "Todas as Unidades") if 'unidade_selecionada' in locals() else False
+ # 2. Verifica se uma unidade específica foi selecionada no filtro
+            # Altere 'unidade_selecionada' para o nome da sua variável do filtro
+            unidade_filtrada = (unidade_selecionada != "Todas as Unidades") if 'unidade_selecionada' in locals() else False
 
-                # 3. Se NÃO houver unidade específica selecionada (visão geral), faz o merge para trazer todas zeradas
-                if not unidade_filtrada:
-                    if cliente_selecionado != "Todos os Clientes":
-                        unidades_do_cliente = df_unidades_map[df_unidades_map["CLIENTE"] == cliente_selecionado][["UNIDADE"]].drop_duplicates()
-                    else:
-                        unidades_do_cliente = df_unidades_map[["UNIDADE"]].drop_duplicates()
-                    
-                    df_unid_chart = unidades_do_cliente.merge(df_unid_chart, on="UNIDADE", how="left").fillna(0)
+            # 3. Se NÃO houver unidade específica selecionada, faz o merge para trazer todas zeradas
+            if not unidade_filtrada:
+                if cliente_selecionado != "Todos os Clientes":
+                    unidades_do_cliente = df_unidades_map[df_unidades_map["CLIENTE"] == cliente_selecionado][["UNIDADE"]].drop_duplicates()
+                else:
+                    unidades_do_cliente = df_unidades_map[["UNIDADE"]].drop_duplicates()
+                
+                df_unid_chart = unidades_do_cliente.merge(df_unid_chart, on="UNIDADE", how="left").fillna(0)
 
                 # 4. Calcula o percentual de vigência
                 df_unid_chart["pct"] = df_unid_chart.apply(
