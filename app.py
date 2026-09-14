@@ -254,40 +254,71 @@ if modulo_selecionado == "Gestão de Vigência":
             )
             st.plotly_chart(fig_gauge, use_container_width=True)
 
-           # Visão de Unidades (Barras Horizontais)
+           # Visão de Unidades (Escala de Cores + Todas as Unidades)
             st.markdown("##### VIGÊNCIA POR UNIDADE")
             if not df_filtered.empty and "UNIDADE" in df_filtered.columns:
+                
+                # 1. Garante a lista completa de unidades cadastradas para o cliente selecionado
+                if cliente_selecionado != "Todos os Clientes":
+                    unidades_do_cliente = df_unidades_map[df_unidades_map["CLIENTE"] == cliente_selecionado][["UNIDADE"]].drop_duplicates()
+                else:
+                    unidades_do_cliente = df_unidades_map[["UNIDADE"]].drop_duplicates()
+
+                # 2. Agrupa dados do boletim
                 df_unid_chart = df_filtered.groupby("UNIDADE").agg({
                     "Distância Percorrida (Km)": "sum",
                     "Distância Identificada (Km)": "sum"
                 }).reset_index()
 
-                df_unid_chart["pct"] = (df_unid_chart["Distância Identificada (Km)"] / df_unid_chart["Distância Percorrida (Km)"]) * 100
-                
-                # Ordena para que a maior vigência fique no topo do gráfico
-                df_unid_chart = df_unid_chart.sort_values(by="pct", ascending=True).tail(15)
+                # 3. Faz o merge com a lista cadastral para garantir exibições zeradas
+                df_unid_chart = unidades_do_cliente.merge(df_unid_chart, on="UNIDADE", how="left").fillna(0)
 
+                # 4. Calcula o percentual de vigência
+                df_unid_chart["pct"] = df_unid_chart.apply(
+                    lambda row: (row["Distância Identificada (Km)"] / row["Distância Percorrida (Km)"] * 100)
+                    if row["Distância Percorrida (Km)"] > 0 else 0.0,
+                    axis=1
+                )
+
+                # Ordena para exibir as maiores vigências no topo do gráfico horizontal
+                df_unid_chart = df_unid_chart.sort_values(by="pct", ascending=True)
+
+                # 5. Atribuição da escala de cores (Verde, Amarelo, Vermelho)
+                def classificar_cor(pct):
+                    if pct >= 90.0:
+                        return "#2E7D32"  # Verde (Excelente)
+                    elif pct >= 85.0:
+                        return "#FBC02D"  # Amarelo (Atenção / Médio)
+                    else:
+                        return "#D32F2F"  # Vermelho (Crítico / Zerado)
+
+                df_unid_chart["cor"] = df_unid_chart["pct"].apply(classificar_cor)
+
+                # 6. Renderização do Gráfico Plotly
                 fig_unid = px.bar(
                     df_unid_chart,
                     x="pct",
                     y="UNIDADE",
-                    orientation='h',  # Torna as barras horizontais
-                    text=df_unid_chart["pct"].apply(lambda x: f"{x:.1f}%"),
-                    color_discrete_sequence=["#1E5631"]
+                    orientation='h',
+                    text=df_unid_chart["pct"].apply(lambda x: f"{x:.1f}%")
                 )
-                
+
                 fig_unid.update_traces(
+                    marker_color=df_unid_chart["cor"],
                     textposition='outside'
                 )
-                
+
+                # Ajusta a altura dinamicamente conforme a quantidade de unidades
+                altura_grafico = max(400, len(df_unid_chart) * 28)
+
                 fig_unid.update_layout(
-                    height=500,  # Aumentado a altura para acomodar bem a lista de unidades
+                    height=altura_grafico,
                     margin=dict(l=20, r=40, t=25, b=20),
                     xaxis_title="",
                     yaxis_title="",
                     xaxis=dict(range=[0, 115])
                 )
-                
+
                 st.plotly_chart(fig_unid, use_container_width=True)
             else:
                 st.warning("Nenhum registro encontrado para os filtros selecionados.")
