@@ -324,7 +324,7 @@ if modulo_selecionado == "Gestão de Vigência":
                 )
 
                 st.plotly_chart(fig_unid, use_container_width=True)
-                else:
+            else:
                 st.warning("Nenhum registro encontrado para os filtros selecionados.")
 
                 # Ajusta a altura dinamicamente (se for 1 unidade só, a altura fica compacta)
